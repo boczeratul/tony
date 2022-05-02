@@ -78,7 +78,7 @@ func (s *serviceImpl) getBlockByHash(c *gin.Context) {
 		err   error
 	)
 	// try db exists
-	if err = s.db.Where("hash = ?", h).Find(&block).Error; err != nil {
+	if err = s.db.Preload("Transactions").Where("hash = ?", h).Find(&block).Error; err != nil {
 		log.Printf("failed to find block with hash %s in DB: %v", h, err)
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
