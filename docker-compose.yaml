@@ -8,7 +8,17 @@ services:
     depends_on:
       - mysql
     entrypoint: /go/bin/server
-    command: -sqlHost "mysql"
+    command: --sqlHost=mysql
+    networks:
+      - portto
+  indexer:
+    image: portto-indexer:1.0-alpine
+    depends_on:
+      - mysql
+    entrypoint: /go/bin/main
+    command: --sqlHost=mysql --worker=10
+    networks:
+      - portto
 
   mysql:
     image: mysql:8.0
@@ -19,6 +29,12 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: portto
       MYSQL_DATABASE: portto
+    networks:
+      - portto
 
 volumes:
   mysql-data:
+   
+networks:
+  portto:
+    driver: bridge
