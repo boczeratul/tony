@@ -16,6 +16,8 @@ import (
 // Indexer defines an interface, which can index a block into DB
 type Indexer interface {
 	IndexRecentBlocks(ctx context.Context, blockNum uint64) (uint64, error)
+	IndexBlockByNum(ctx context.Context, blockNum uint64) error
+	IndexBlock(block *eth.Block) error
 	CheckTables() error
 	Cron(cronExp string)
 }
@@ -41,7 +43,7 @@ func (i *impl) IndexRecentBlocks(ctx context.Context, startingBlockNum uint64) (
 			n := startingBlockNum
 			startingBlockNum++
 			eg.Go(func() error {
-				if err := i.IndexBlock(gctx, n); err != nil {
+				if err := i.IndexBlockByNum(gctx, n); err != nil {
 					return fmt.Errorf("failed to index block %d to database: %v", n, err)
 				}
 				return nil
@@ -84,12 +86,17 @@ func (i *impl) Cron(cronExp string) {
 	c.Start()
 }
 
-// IndexBlock inserts a block with blockNum to DB
-func (i *impl) IndexBlock(ctx context.Context, blockNum uint64) error {
+// IndexBlockByNum inserts a block with blockNum to DB
+func (i *impl) IndexBlockByNum(ctx context.Context, blockNum uint64) error {
 	block, err := i.ethClient.GetBlockByNumber(ctx, blockNum)
 	if err != nil {
 		return fmt.Errorf("failed to get block %d: %v", blockNum, err)
 	}
+	return i.IndexBlock(block)
+}
+
+// IndexBlock inserts a block to DB
+func (i *impl) IndexBlock(block *eth.Block) error {
 	if err := i.db.Clauses(clause.OnConflict{UpdateAll: true}).Create(block).Error; err != nil {
 		return fmt.Errorf("failed to insert block to DB: %v", err)
 	}
