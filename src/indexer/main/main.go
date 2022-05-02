@@ -11,7 +11,7 @@ import (
 
 const (
 	defaultEndpoint           = "https://data-seed-prebsc-2-s3.binance.org:8545/"
-	defaultBlockNumber uint64 = 18921657
+	defaultBlockNumber uint64 = 0
 )
 
 var (
@@ -49,10 +49,13 @@ func main() {
 		log.Fatalf("failed to check required tables exist: %v", err)
 	}
 
+	if *blockNumber > 0 {
+		log.Printf("start to index blocks from block number %d", *blockNumber)
+	}
 	ret, err := indexer.IndexRecentBlocks(context.Background(), *blockNumber)
 	if err != nil {
-		log.Fatalf("failed to index recent blocks from block #%d: %v", *blockNumber, err)
+		log.Fatalf("failed to index recent blocks: %v", err)
 	}
 
-	log.Printf("finish indexing blocks starting from block %d until %d", *blockNumber, ret)
+	log.Printf("finish indexing blocks until block #%d", ret)
 }
