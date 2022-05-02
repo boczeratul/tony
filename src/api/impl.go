@@ -63,7 +63,7 @@ func (s *serviceImpl) getBlocks(c *gin.Context) {
 		}
 	}(blocks)
 
-	c.JSON(http.StatusOK, blocks)
+	c.JSON(http.StatusOK, gin.H{"blocks": blocks})
 }
 
 func (s *serviceImpl) getBlockByHash(c *gin.Context) {
