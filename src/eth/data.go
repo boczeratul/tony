@@ -1,19 +1,36 @@
 package eth
 
 import (
+	"database/sql/driver"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
+// TransactionIDs is a custom type for gorm
+type TransactionIDs []string
+
+// Scan implements the Scanner interface
+func (ts *TransactionIDs) Scan(src interface{}) error {
+	return json.Unmarshal([]byte(src.(string)), ts)
+}
+
+// Value implements the Valuer interface
+func (ts *TransactionIDs) Value() (driver.Value, error) {
+	val, err := json.Marshal(ts)
+	return string(val), err
+}
+
 // Block defines a data structure representing an eth block
 type Block struct {
-	Num          uint64        `json:"block_num" gorm:"primaryKey"` // hash in hex
-	Hash         string        `json:"block_hash" gorm:"index"`     // hash in hex
-	Time         uint64        `json:"block_time"`
-	ParentHash   string        `json:"parent_hash"`
-	Transactions []Transaction `json:"transactions" gorm:"foreignKey:BlockNum;references:Num"`
+	Num            uint64         `json:"block_num" gorm:"primaryKey"` // hash in hex
+	Hash           string         `json:"block_hash" gorm:"index"`     // hash in hex
+	Time           uint64         `json:"block_time"`
+	ParentHash     string         `json:"parent_hash"`
+	Transactions   []Transaction  `json:"-" gorm:"foreignKey:BlockNum;references:Num"`
+	TransactionIDs TransactionIDs `json:"transactions" gorm:"-"`
 }
 
 // Transaction defines a data structure representing an eth transaction

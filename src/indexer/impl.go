@@ -28,20 +28,22 @@ type impl struct {
 	workerNum int
 }
 
-func (i *impl) IndexRecentBlocks(ctx context.Context, startingBlockNum uint64) (uint64, error) {
+func (i *impl) IndexRecentBlocks(ctx context.Context, blockNum uint64) (uint64, error) {
 	targetNum, err := i.ethClient.GetCurrentNumber(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get current block number: %v", err)
 	}
 
 	// index blocks until the most recent one
-	startingBlockNum = targetNum - 5
-	for startingBlockNum <= targetNum {
+	if blockNum == 0 {
+		blockNum = targetNum
+	}
+	for blockNum <= targetNum {
 		eg, gctx := errgroup.WithContext(context.Background())
 		// dispatch workload to workers
 		for w := 0; w < i.workerNum; w++ {
-			n := startingBlockNum
-			startingBlockNum++
+			n := blockNum
+			blockNum++
 			eg.Go(func() error {
 				if err := i.IndexBlockByNum(gctx, n); err != nil {
 					return fmt.Errorf("failed to index block %d to database: %v", n, err)
@@ -49,7 +51,7 @@ func (i *impl) IndexRecentBlocks(ctx context.Context, startingBlockNum uint64) (
 				return nil
 			})
 
-			if startingBlockNum > targetNum {
+			if blockNum > targetNum {
 				break
 			}
 		}
@@ -58,7 +60,7 @@ func (i *impl) IndexRecentBlocks(ctx context.Context, startingBlockNum uint64) (
 		}
 
 		// update remote current block number
-		if startingBlockNum > targetNum {
+		if blockNum > targetNum {
 			targetNum, err = i.ethClient.GetCurrentNumber(ctx)
 			if err != nil {
 				return 0, fmt.Errorf("failed to get current block number: %v", err)
@@ -71,16 +73,23 @@ func (i *impl) IndexRecentBlocks(ctx context.Context, startingBlockNum uint64) (
 // Cron starts a cronjob to index recent blocks every time period
 func (i *impl) Cron(cronExp string) {
 	c := cron.New()
-	fmt.Println("cron")
 	c.AddFunc(cronExp, func() {
 		n, err := db.GetLatestNumFromDB(i.db)
 		if err != nil {
 			log.Printf("[cronjob] failed to get latest num from db: %v", err)
 		}
-		if nn, err := i.IndexRecentBlocks(context.Background(), n+1); err != nil {
+		start := n + 1
+		if n == 0 {
+			curNum, err := i.ethClient.GetCurrentNumber(context.Background())
+			if err != nil {
+				return
+			}
+			start = curNum
+		}
+		if until, err := i.IndexRecentBlocks(context.Background(), start); err != nil {
 			log.Printf("[cronjob] failed to index recent blocks to db: %v", err)
 		} else {
-			log.Printf("[cronjob] indexed blocks %d-%d to db", n, nn)
+			log.Printf("[cronjob] indexed blocks %d-%d to db", start, until)
 		}
 	})
 	c.Start()
