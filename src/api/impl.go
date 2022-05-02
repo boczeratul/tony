@@ -25,11 +25,7 @@ type serviceImpl struct {
 
 func (s *serviceImpl) getBlocks(c *gin.Context) {
 	l := c.Query("limit")
-	limit, err := strconv.Atoi(l)
-	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("bad limit query parameter"))
-		return
-	}
+	limit, _ := strconv.Atoi(l)
 	if limit <= 0 {
 		limit = defaultLimit
 	}
