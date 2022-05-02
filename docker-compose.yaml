@@ -1,0 +1,24 @@
+version: "3.7"
+
+services:
+  app:
+    image: portto-api:1.0-alpine
+    ports:
+      - 3000:3000
+    depends_on:
+      - mysql
+    entrypoint: /go/bin/server
+    command: -sqlHost "mysql"
+
+  mysql:
+    image: mysql:8.0
+    ports:
+      - 3306:3306
+    volumes:
+      - mysql-data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: portto
+      MYSQL_DATABASE: portto
+
+volumes:
+  mysql-data:
